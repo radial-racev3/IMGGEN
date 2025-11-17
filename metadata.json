@@ -1,0 +1,5 @@
+{
+  "name": "AI Image Studio",
+  "description": "A detailed AI-powered image generator that allows users to create accounts to save, download, and share their unique visual creations. Powered by Gemini.",
+  "requestFramePermissions": []
+}
