@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import useAuth from '../hooks/useAuth.js';
 import { generateImages } from '../services/geminiService.js';
 import { LogoIcon, LogoutIcon, GenerateIcon, LoadingIcon } from './icons.js';
@@ -7,6 +7,23 @@ import ImageCard from './ImageCard.js';
 
 const aspectRatios = ["1:1", "16:9", "9:16", "4:3", "3:4"];
 const imageCounts = [1, 2, 3, 4];
+
+const ApiKeyWarning = () => React.createElement(
+  'div',
+  { className: 'flex flex-col items-center justify-center text-center bg-red-900/20 border-2 border-dashed border-red-500/50 rounded-2xl py-20 px-4' },
+  React.createElement('h3', { className: 'text-2xl font-bold text-red-300' }, 'Configuration Error'),
+  React.createElement(
+    'p', 
+    { className: 'text-red-300/80 mt-2 max-w-md' },
+    'The AI Image Studio requires an API key to function. The `process.env.API_KEY` was not found in the environment where this app is running.'
+  ),
+  React.createElement(
+    'p',
+    { className: 'text-gray-400 mt-4 text-sm' },
+    'Please run this application in a supported environment (like the AI Studio preview) where the API key is provided.'
+  )
+);
+
 
 const MainApp = () => {
   const { user, logout, saveImage, getImages, deleteImage } = useAuth();
@@ -17,6 +34,14 @@ const MainApp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [notification, setNotification] = useState('');
+  const [apiKeyError, setApiKeyError] = useState(false);
+
+  useEffect(() => {
+    // Check for API key on component mount
+    if (!process.env.API_KEY) {
+      setApiKeyError(true);
+    }
+  }, []);
 
   const showNotification = (message) => {
     setNotification(message);
@@ -39,7 +64,11 @@ const MainApp = () => {
       setPrompt('');
       showNotification(`${newImageDatas.length} new image(s) generated!`);
     } catch (e) {
-      setError(e.message || 'An unexpected error occurred.');
+      if (e.message === 'API_KEY_MISSING') {
+        setApiKeyError(true);
+      } else {
+        setError(e.message || 'An unexpected error occurred.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -50,6 +79,41 @@ const MainApp = () => {
     setImages(getImages());
     showNotification('Image deleted.');
   }, [deleteImage, getImages]);
+
+  const renderGalleryContent = () => {
+    if (apiKeyError) {
+      return React.createElement(ApiKeyWarning, null);
+    }
+    
+    if (isLoading) {
+      return React.createElement(
+        'div',
+        { className: 'grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4' },
+        Array.from({ length: numImages }).map((_, index) =>
+          React.createElement('div', { key: index, className: 'aspect-square bg-gray-800 rounded-lg animate-pulse' })
+        )
+      );
+    }
+    
+    if (images.length > 0) {
+      return React.createElement(
+        'div',
+        { className: 'grid grid-cols-1 sm:grid-cols-2 gap-4' },
+        images.map(image =>
+          React.createElement(ImageCard, { key: image.id, image: image, onDelete: handleDelete, onNotify: showNotification })
+        )
+      );
+    }
+
+    // Not loading and no images
+    return React.createElement(
+      'div',
+      { className: 'flex flex-col items-center justify-center text-center bg-gray-800/50 border-2 border-dashed border-gray-700 rounded-2xl py-20' },
+      React.createElement(GenerateIcon, { className: 'h-16 w-16 text-gray-500 mb-4' }),
+      React.createElement('h3', { className: 'text-xl font-semibold' }, 'Your gallery is empty'),
+      React.createElement('p', { className: 'text-gray-400 mt-1' }, 'Start by creating your first image!')
+    );
+  };
 
   return React.createElement(
     'div',
@@ -117,6 +181,7 @@ const MainApp = () => {
                 onChange: (e) => setPrompt(e.target.value),
                 className: 'w-full bg-gray-900/50 border border-gray-600 rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none transition',
                 placeholder: 'e.g., A cinematic shot of a raccoon in a library, epic lighting',
+                disabled: apiKeyError
               })
             ),
             React.createElement(
@@ -129,7 +194,7 @@ const MainApp = () => {
                 aspectRatios.map(ratio =>
                   React.createElement(
                     'button',
-                    { key: ratio, onClick: () => setAspectRatio(ratio), className: `py-2 px-1 text-xs sm:text-sm font-semibold rounded-lg transition ${aspectRatio === ratio ? 'bg-purple-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}` },
+                    { key: ratio, onClick: () => setAspectRatio(ratio), className: `py-2 px-1 text-xs sm:text-sm font-semibold rounded-lg transition ${aspectRatio === ratio ? 'bg-purple-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`, disabled: apiKeyError },
                     ratio
                   )
                 )
@@ -145,7 +210,7 @@ const MainApp = () => {
                 imageCounts.map(count =>
                   React.createElement(
                     'button',
-                    { key: count, onClick: () => setNumImages(count), className: `py-2 px-1 text-sm font-semibold rounded-lg transition ${numImages === count ? 'bg-purple-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}` },
+                    { key: count, onClick: () => setNumImages(count), className: `py-2 px-1 text-sm font-semibold rounded-lg transition ${numImages === count ? 'bg-purple-600 text-white' : 'bg-gray-700 hover:bg-gray-600'}`, disabled: apiKeyError },
                     count
                   )
                 )
@@ -156,7 +221,7 @@ const MainApp = () => {
               'button',
               {
                 onClick: handleGenerate,
-                disabled: isLoading,
+                disabled: isLoading || apiKeyError,
                 className: 'w-full flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition-transform transform hover:scale-105 shadow-lg shadow-purple-600/20 disabled:bg-gray-500 disabled:scale-100 disabled:cursor-not-allowed',
               },
               isLoading
@@ -184,28 +249,7 @@ const MainApp = () => {
             React.createElement('h2', { className: 'text-2xl font-bold' }, 'Your Gallery'),
             React.createElement('p', { className: 'text-gray-400' }, `${images.length} image(s) created`)
           ),
-          isLoading && React.createElement(
-            'div',
-            { className: 'grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4' },
-            Array.from({ length: numImages }).map((_, index) =>
-              React.createElement('div', { key: index, className: 'aspect-square bg-gray-800 rounded-lg animate-pulse' })
-            )
-          ),
-          images.length > 0
-            ? React.createElement(
-                'div',
-                { className: 'grid grid-cols-1 sm:grid-cols-2 gap-4' },
-                images.map(image =>
-                  React.createElement(ImageCard, { key: image.id, image: image, onDelete: handleDelete, onNotify: showNotification })
-                )
-              )
-            : !isLoading && React.createElement(
-                'div',
-                { className: 'flex flex-col items-center justify-center text-center bg-gray-800/50 border-2 border-dashed border-gray-700 rounded-2xl py-20' },
-                React.createElement(GenerateIcon, { className: 'h-16 w-16 text-gray-500 mb-4' }),
-                React.createElement('h3', { className: 'text-xl font-semibold' }, 'Your gallery is empty'),
-                React.createElement('p', { className: 'text-gray-400 mt-1' }, 'Start by creating your first image!')
-              )
+          renderGalleryContent()
         )
       )
     )

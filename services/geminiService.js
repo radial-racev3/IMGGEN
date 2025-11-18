@@ -4,7 +4,7 @@ import { GoogleGenAI } from "@google/genai";
 export const generateImages = async (prompt, numberOfImages, aspectRatio) => {
   // Assume API_KEY is set in the environment.
   if (!process.env.API_KEY) {
-      throw new Error("API_KEY environment variable not set.");
+      throw new Error("API_KEY_MISSING");
   }
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
