@@ -5,21 +5,21 @@ import LoginScreen from './components/LoginScreen';
 import MainApp from './components/MainApp';
 import { AuthProvider } from './hooks/useAuth';
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { user } = useAuth();
 
-  return (
-    <div className="min-h-screen bg-gray-900 text-gray-100 font-sans">
-      {user ? <MainApp /> : <LoginScreen />}
-    </div>
+  return React.createElement(
+    'div',
+    { className: 'min-h-screen bg-gray-900 text-gray-100 font-sans' },
+    user ? React.createElement(MainApp, null) : React.createElement(LoginScreen, null)
   );
 };
 
-const App: React.FC = () => {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+const App = () => {
+  return React.createElement(
+    AuthProvider,
+    null,
+    React.createElement(AppContent, null)
   );
 };
 

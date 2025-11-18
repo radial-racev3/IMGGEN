@@ -1,7 +1,7 @@
 
 import { GoogleGenAI } from "@google/genai";
 
-export const generateImages = async (prompt: string, numberOfImages: number, aspectRatio: string): Promise<string[]> => {
+export const generateImages = async (prompt, numberOfImages, aspectRatio) => {
   // Assume API_KEY is set in the environment.
   if (!process.env.API_KEY) {
       throw new Error("API_KEY environment variable not set.");

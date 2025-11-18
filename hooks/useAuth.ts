@@ -1,24 +1,14 @@
+
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import type { User, GeneratedImage } from '../types';
 
-interface AuthContextType {
-  user: User | null;
-  login: (username: string, pass: string) => boolean;
-  register: (username: string, pass: string) => boolean;
-  logout: () => void;
-  saveImage: (image: Omit<GeneratedImage, 'id' | 'createdAt'>) => void;
-  getImages: () => GeneratedImage[];
-  deleteImage: (id: string) => void;
-}
-
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext(null);
 
 const USERS_KEY = 'ai_image_gen_users';
 const GALLERIES_KEY = 'ai_image_gen_galleries';
 const CURRENT_USER_KEY = 'ai_image_gen_current_user';
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem(CURRENT_USER_KEY);
@@ -27,7 +17,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = (username: string, pass: string): boolean => {
+  const login = (username, pass) => {
     const users = JSON.parse(localStorage.getItem(USERS_KEY) || '{}');
     if (users[username] && users[username] === pass) {
       const loggedInUser = { username };
@@ -38,7 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
-  const register = (username: string, pass: string): boolean => {
+  const register = (username, pass) => {
     const users = JSON.parse(localStorage.getItem(USERS_KEY) || '{}');
     if (users[username]) {
       return false; // User already exists
@@ -60,17 +50,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return JSON.parse(localStorage.getItem(GALLERIES_KEY) || '{}');
   }, []);
   
-  const saveGalleries = useCallback((galleries: any) => {
+  const saveGalleries = useCallback((galleries) => {
     localStorage.setItem(GALLERIES_KEY, JSON.stringify(galleries));
   }, []);
 
-  const saveImage = useCallback((image: Omit<GeneratedImage, 'id' | 'createdAt'>) => {
+  const saveImage = useCallback((image) => {
     if (!user) return;
     const galleries = getGalleries();
     if (!galleries[user.username]) {
       galleries[user.username] = [];
     }
-    const newImage: GeneratedImage = {
+    const newImage = {
       ...image,
       id: `img-${Date.now()}-${Math.random()}`,
       createdAt: new Date().toISOString(),
@@ -79,22 +69,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     saveGalleries(galleries);
   }, [user, getGalleries, saveGalleries]);
 
-  const getImages = useCallback((): GeneratedImage[] => {
+  const getImages = useCallback(() => {
     if (!user) return [];
     const galleries = getGalleries();
     return galleries[user.username] || [];
   }, [user, getGalleries]);
   
-  const deleteImage = useCallback((id: string) => {
+  const deleteImage = useCallback((id) => {
     if(!user) return;
     const galleries = getGalleries();
     if (galleries[user.username]) {
-      galleries[user.username] = galleries[user.username].filter((img: GeneratedImage) => img.id !== id);
+      galleries[user.username] = galleries[user.username].filter((img) => img.id !== id);
       saveGalleries(galleries);
     }
   }, [user, getGalleries, saveGalleries]);
 
-  // FIX: Replaced JSX syntax with React.createElement to prevent parsing errors in a .ts file.
   return React.createElement(
     AuthContext.Provider,
     {
@@ -104,7 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-const useAuth = (): AuthContextType => {
+const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
